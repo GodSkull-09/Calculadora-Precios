@@ -39,7 +39,7 @@ if precio_dolares > 0:
         ganancia_estimada = round(precio_final - precio_con_envio, 2)
         st.metric(label="Ganancia Bruta", value=f"${ganancia_estimada} MXN", delta=f"{int((margen_ganancia-1)*100)}%")
     with col3:
-        st.metric(label = "Ahorro/Descuento", value=f'-${round(monto_descuento, 2)} MXN', delta =f'{porcentaje_descuento}%')
+        st.metric(label = "Ahorro del Cliente", value=f'-${round(monto_descuento, 2)} MXN', delta =f'{porcentaje_descuento}%')
 
     st.info(f"Costo base: ${precio_pesos:.2f} | Envío: ${costo_envio} | Sin descuento: ${round(precio_base_con_margen, 2)}")
 else:
