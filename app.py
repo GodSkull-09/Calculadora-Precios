@@ -11,7 +11,7 @@ st.sidebar.header("Configuración de Costos")
 
 tasa_cambio = st.sidebar.number_input("Tasa de Cambio (USD a MXN)", value=18.5, step=0.1)
 porcentaje_descuento = st.sidebar.number_input("Descuento Aplicado (Porcentaje %)",
-value = 10.0, step=0.1)
+value = 0.0, step=1.0)
 costo_envio = st.sidebar.number_input("Costo Fijo de Envío (MXN)", value=80.0, step=10.0)
 margen_ganancia = st.sidebar.number_input("Margen de Ganancia (Multiplicador)", value=1.6, step=0.1)
 
