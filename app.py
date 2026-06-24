@@ -1,53 +1,185 @@
 import streamlit as st
+import json
+import os
 
 # configuracion de la pagina
 st.set_page_config(page_title="Calculadora de Precios Unique", page_icon="🏷️")
 
-st.title("Calculadora de Precios Unique")
-st.markdown("----")
+# ---------------------------------------------------------------------------
+# Presets
+# ---------------------------------------------------------------------------
 
-# barra lateral
+# archivo donde se guardan los presets (junto a app.py)
+PRESETS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "presets.json")
+
+# parametros que define cada preset
+PARAMS = ["descuento", "impuesto", "tasa_cambio", "costo_envio", "margen_ganancia"]
+
+# presets que vienen por defecto
+DEFAULT_PRESETS = {
+    "YoungLA":             {"descuento": 15.0, "impuesto": 1.093, "tasa_cambio": 18.0, "costo_envio": 80.0, "margen_ganancia": 1.70},
+    "Gymshark":            {"descuento": 10.0, "impuesto": 1.093, "tasa_cambio": 18.0, "costo_envio": 80.0, "margen_ganancia": 1.70},
+    "Breathedivinity":     {"descuento": 10.0, "impuesto": 1.093, "tasa_cambio": 18.0, "costo_envio": 80.0, "margen_ganancia": 1.55},
+    "Controlled Insanity": {"descuento": 10.0, "impuesto": 1.093, "tasa_cambio": 18.0, "costo_envio": 80.0, "margen_ganancia": 1.70},
+    "Darc Sport":          {"descuento": 10.0, "impuesto": 1.093, "tasa_cambio": 18.0, "costo_envio": 80.0, "margen_ganancia": 1.65},
+    "Dfyne":               {"descuento": 10.0, "impuesto": 1.093, "tasa_cambio": 18.0, "costo_envio": 80.0, "margen_ganancia": 1.50},
+}
+
+
+def guardar_presets(presets):
+    """Escribe los presets al archivo json."""
+    try:
+        with open(PRESETS_FILE, "w", encoding="utf-8") as f:
+            json.dump(presets, f, indent=2, ensure_ascii=False)
+    except OSError:
+        st.sidebar.error("No se pudieron guardar los presets en disco.")
+
+
+def cargar_presets():
+    """Lee los presets del archivo; si no existe, lo crea con los de por defecto."""
+    if os.path.exists(PRESETS_FILE):
+        try:
+            with open(PRESETS_FILE, "r", encoding="utf-8") as f:
+                datos = json.load(f)
+            if isinstance(datos, dict) and datos:
+                return datos
+        except (json.JSONDecodeError, OSError):
+            pass
+    guardar_presets(DEFAULT_PRESETS)
+    return dict(DEFAULT_PRESETS)
+
+
+# cargar presets una sola vez por sesion
+if "presets" not in st.session_state:
+    st.session_state["presets"] = cargar_presets()
+
+# inicializar los parametros con el primer preset (solo la primera vez)
+if "descuento" not in st.session_state:
+    primer_nombre = next(iter(st.session_state["presets"]))
+    for clave, valor in st.session_state["presets"][primer_nombre].items():
+        st.session_state[clave] = float(valor)
+    st.session_state["nombre_guardar"] = primer_nombre
+
+
+def aplicar_preset():
+    """Carga los valores del preset elegido en los parametros (callback del selector)."""
+    nombre = st.session_state["selector_preset"]
+    preset = st.session_state["presets"].get(nombre)
+    if preset:
+        for clave in PARAMS:
+            st.session_state[clave] = float(preset[clave])
+        st.session_state["nombre_guardar"] = nombre
+
+
+def guardar_preset_actual():
+    """Guarda los parametros actuales bajo el nombre escrito (crea nuevo o sobrescribe)."""
+    nombre = st.session_state["nombre_guardar"].strip()
+    if not nombre:
+        st.session_state["_aviso"] = ("warning", "Escribe un nombre para el preset.")
+        return
+    st.session_state["presets"][nombre] = {clave: float(st.session_state[clave]) for clave in PARAMS}
+    guardar_presets(st.session_state["presets"])
+    st.session_state["selector_preset"] = nombre  # dejar seleccionado el guardado
+    st.session_state["_aviso"] = ("success", f"Preset «{nombre}» guardado.")
+
+
+def eliminar_preset_actual():
+    """Elimina el preset actualmente seleccionado."""
+    nombre = st.session_state["selector_preset"]
+    if len(st.session_state["presets"]) <= 1:
+        st.session_state["_aviso"] = ("warning", "Debe quedar al menos un preset.")
+        return
+    st.session_state["presets"].pop(nombre, None)
+    guardar_presets(st.session_state["presets"])
+    nuevo = next(iter(st.session_state["presets"]))
+    st.session_state["selector_preset"] = nuevo
+    st.session_state["nombre_guardar"] = nuevo
+    for clave in PARAMS:
+        st.session_state[clave] = float(st.session_state["presets"][nuevo][clave])
+    st.session_state["_aviso"] = ("success", f"Preset «{nombre}» eliminado.")
+
+
+# ---------------------------------------------------------------------------
+# Barra lateral: presets + configuracion de costos
+# ---------------------------------------------------------------------------
+
+st.sidebar.header("📦 Presets")
+
+st.sidebar.selectbox(
+    "Selecciona una marca / preset",
+    options=list(st.session_state["presets"].keys()),
+    key="selector_preset",
+    on_change=aplicar_preset,
+)
+
+with st.sidebar.expander("💾 Guardar / administrar presets"):
+    st.text_input("Nombre del preset", key="nombre_guardar")
+    col_g, col_e = st.columns(2)
+    col_g.button("💾 Guardar", on_click=guardar_preset_actual, width="stretch")
+    col_e.button("🗑️ Eliminar", on_click=eliminar_preset_actual, width="stretch")
+    st.caption("«Guardar» crea un preset nuevo, o sobrescribe si el nombre ya existe.")
+
+# mostrar el aviso de guardado/eliminado si lo hay
+if "_aviso" in st.session_state:
+    tipo, texto = st.session_state.pop("_aviso")
+    getattr(st.sidebar, tipo)(texto)
+
+st.sidebar.markdown("---")
 st.sidebar.header("Configuración de Costos")
 
 porcentaje_descuento = st.sidebar.number_input(
     "Descuento Aplicado (%)",
-    value=0.0,
     step=1.0,
     min_value=0.0,
-    max_value=100.0
+    max_value=100.0,
+    key="descuento",
 )
 
 impuesto = st.sidebar.number_input(
-    "Multiplicador de Impuesto (ej. 1.07, 1.074)",
-    value=1.07,
+    "Multiplicador de Impuesto (ej. 1.07, 1.093)",
     step=0.001,
     min_value=1.0,
-    format="%.3f"
+    format="%.3f",
+    key="impuesto",
 )
 
 tasa_cambio = st.sidebar.number_input(
     "Tasa de Cambio (USD a MXN)",
-    value=18.0,
     step=0.5,
-    min_value=1.0
+    min_value=1.0,
+    key="tasa_cambio",
 )
 
 costo_envio = st.sidebar.number_input(
     "Costo Fijo de Envío (MXN)",
-    value=80.0,
     step=10.0,
-    min_value=0.0
+    min_value=0.0,
+    key="costo_envio",
 )
 
 margen_ganancia = st.sidebar.number_input(
     "Margen de Ganancia (Multiplicador)",
-    value=1.60,
     step=0.05,
     min_value=1.0,
-    format="%.2f"
+    format="%.2f",
+    key="margen_ganancia",
 )
 
-# area principal
+# ---------------------------------------------------------------------------
+# Area principal
+# ---------------------------------------------------------------------------
+
+st.title("Calculadora de Precios Unique")
+
+# indicar el preset activo y si fue modificado respecto al guardado
+preset_guardado = st.session_state["presets"].get(st.session_state["selector_preset"], {})
+modificado = any(
+    abs(float(st.session_state[clave]) - float(preset_guardado.get(clave, st.session_state[clave]))) > 1e-9
+    for clave in PARAMS
+)
+st.caption(f"Preset activo: **{st.session_state['selector_preset']}**" + (" — _modificado_ ✏️" if modificado else ""))
+st.markdown("----")
+
 st.subheader("Entrada de Producto")
 precio_dolares = st.number_input("Precio del producto en Dólares (USD):", min_value=0.0, step=1.0)
 
