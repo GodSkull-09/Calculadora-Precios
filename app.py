@@ -341,14 +341,12 @@ logo_html = (
     if uri else '<div class="uq-logo uq-logo-fallback">UQ</div>'
 )
 st.markdown(
-    f"""
-<div class="uq-header">
-  {logo_html}
-  <div class="uq-brand">Unique Gym Shop</div>
-  <div class="uq-tagline">Calculadora de Precios</div>
-</div>
-<hr class="uq-rule"/>
-""",
+    '<div class="uq-header">'
+    f"{logo_html}"
+    '<div class="uq-brand">Unique Gym Shop</div>'
+    '<div class="uq-tagline">Calculadora de Precios</div>'
+    "</div>"
+    '<hr class="uq-rule"/>',
     unsafe_allow_html=True,
 )
 
@@ -382,59 +380,51 @@ if precio_dolares > 0:
 
     # ---- hero: precio final ----
     st.markdown(
-        f"""
-<div class="uq-hero">
-  <div class="uq-hero-label">Precio Final Sugerido</div>
-  <div class="uq-hero-value">${precio_final:,.2f}<span>MXN</span></div>
-  <div class="uq-hero-sub">Costo base ${precio_con_envio:,.2f} &nbsp;·&nbsp; Margen ×{margen_ganancia:.2f} &nbsp;·&nbsp; {activo}</div>
-</div>
-""",
+        '<div class="uq-hero">'
+        '<div class="uq-hero-label">Precio Final Sugerido</div>'
+        f'<div class="uq-hero-value">${precio_final:,.2f}<span>MXN</span></div>'
+        f'<div class="uq-hero-sub">Costo base ${precio_con_envio:,.2f} &nbsp;·&nbsp; Margen ×{margen_ganancia:.2f} &nbsp;·&nbsp; {activo}</div>'
+        "</div>",
         unsafe_allow_html=True,
     )
 
     # ---- tarjetas secundarias ----
     if porcentaje_descuento > 0:
-        ahorro_card = f"""
-    <div class="uq-card">
-      <div class="uq-card-label">Ahorro vs sin descuento</div>
-      <div class="uq-card-value">−${ahorro_total_mxn:,.2f}</div>
-      <div class="uq-card-sub">Descuento {porcentaje_descuento:g}% en USD</div>
-    </div>"""
+        ahorro_label, ahorro_value, ahorro_sub = (
+            "Ahorro vs sin descuento",
+            f"−${ahorro_total_mxn:,.2f}",
+            f"Descuento {porcentaje_descuento:g}% en USD",
+        )
     else:
-        ahorro_card = """
-    <div class="uq-card">
-      <div class="uq-card-label">Descuento aplicado</div>
-      <div class="uq-card-value">—</div>
-      <div class="uq-card-sub">Sin descuento</div>
-    </div>"""
+        ahorro_label, ahorro_value, ahorro_sub = "Descuento aplicado", "—", "Sin descuento"
 
     st.markdown(
-        f"""
-<div class="uq-grid">
-    <div class="uq-card">
-      <div class="uq-card-label">Ganancia bruta</div>
-      <div class="uq-card-value">${ganancia_estimada:,.2f}</div>
-      <div class="uq-card-sub">+{int((margen_ganancia - 1) * 100)}% sobre el costo base</div>
-    </div>
-    {ahorro_card}
-</div>
-""",
+        '<div class="uq-grid">'
+        '<div class="uq-card">'
+        '<div class="uq-card-label">Ganancia bruta</div>'
+        f'<div class="uq-card-value">${ganancia_estimada:,.2f}</div>'
+        f'<div class="uq-card-sub">+{int((margen_ganancia - 1) * 100)}% sobre el costo base</div>'
+        "</div>"
+        '<div class="uq-card">'
+        f'<div class="uq-card-label">{ahorro_label}</div>'
+        f'<div class="uq-card-value">{ahorro_value}</div>'
+        f'<div class="uq-card-sub">{ahorro_sub}</div>'
+        "</div>"
+        "</div>",
         unsafe_allow_html=True,
     )
 
     # ---- desglose paso a paso ----
     with st.expander("Ver desglose paso a paso"):
         st.markdown(
-            f"""
-<table class="uq-steps">
-  <tr><td>1 · Precio original</td><td>${precio_dolares:,.2f} USD</td></tr>
-  <tr><td>2 · Descuento ({porcentaje_descuento:g}%)</td><td>−${monto_descuento_usd:,.2f} → ${precio_con_descuento:,.2f} USD</td></tr>
-  <tr><td>3 · Impuesto (×{impuesto:.3f})</td><td>${precio_con_impuesto:,.2f} USD</td></tr>
-  <tr><td>4 · Conversión (×{tasa_cambio:g} MXN)</td><td>${precio_pesos:,.2f} MXN</td></tr>
-  <tr><td>5 · Envío (+${costo_envio:g})</td><td>${precio_con_envio:,.2f} MXN</td></tr>
-  <tr><td>6 · Margen (×{margen_ganancia:.2f})</td><td>${precio_final:,.2f} MXN</td></tr>
-</table>
-""",
+            '<table class="uq-steps">'
+            f'<tr><td>1 · Precio original</td><td>${precio_dolares:,.2f} USD</td></tr>'
+            f'<tr><td>2 · Descuento ({porcentaje_descuento:g}%)</td><td>−${monto_descuento_usd:,.2f} → ${precio_con_descuento:,.2f} USD</td></tr>'
+            f'<tr><td>3 · Impuesto (×{impuesto:.3f})</td><td>${precio_con_impuesto:,.2f} USD</td></tr>'
+            f'<tr><td>4 · Conversión (×{tasa_cambio:g} MXN)</td><td>${precio_pesos:,.2f} MXN</td></tr>'
+            f'<tr><td>5 · Envío (+${costo_envio:g})</td><td>${precio_con_envio:,.2f} MXN</td></tr>'
+            f'<tr><td>6 · Margen (×{margen_ganancia:.2f})</td><td>${precio_final:,.2f} MXN</td></tr>'
+            "</table>",
             unsafe_allow_html=True,
         )
 
