@@ -22,3 +22,9 @@ presets.json
 # Editores
 .vscode/
 .idea/
+
+# Streamlit (el tema config.toml SI se versiona; los secretos no)
+.streamlit/secrets.toml
+
+# Tooling local
+.claude/

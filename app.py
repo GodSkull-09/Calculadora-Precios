@@ -1,16 +1,173 @@
 import streamlit as st
 import json
 import os
+import base64
 
-# configuracion de la pagina
-st.set_page_config(page_title="Calculadora de Precios Unique", page_icon="🏷️")
+# ---------------------------------------------------------------------------
+# Rutas y configuracion de la pagina
+# ---------------------------------------------------------------------------
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PRESETS_FILE = os.path.join(BASE_DIR, "presets.json")
+LOGO_PATH = os.path.join(BASE_DIR, "assets", "logo.jpg")
+
+st.set_page_config(
+    page_title="UQ GYM · Calculadora de Precios",
+    page_icon=LOGO_PATH if os.path.exists(LOGO_PATH) else "🏷️",
+    layout="centered",
+    initial_sidebar_state="expanded",
+)
+
+
+@st.cache_data(show_spinner=False)
+def _logo_uri():
+    """Devuelve el logo como data-URI para incrustarlo con estilos propios."""
+    if not os.path.exists(LOGO_PATH):
+        return None
+    with open(LOGO_PATH, "rb") as f:
+        return "data:image/jpeg;base64," + base64.b64encode(f.read()).decode()
+
+
+# ---------------------------------------------------------------------------
+# Estilos — tema oscuro premium UQ GYM
+# ---------------------------------------------------------------------------
+
+st.markdown(
+    """
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+:root{
+  --uq-panel:#0E0E10; --uq-panel-2:#141417;
+  --uq-line:rgba(255,255,255,.12); --uq-line-soft:rgba(255,255,255,.06);
+  --uq-text:#ECECEE; --uq-muted:#8C8C92; --uq-white:#FFFFFF;
+}
+
+/* fondo con un halo sutil detras del logo */
+.stApp{ background:radial-gradient(1100px 540px at 50% -8%, #1A1A20 0%, #050506 48%, #000 100%); }
+[data-testid="stAppViewContainer"], .stMarkdown, .block-container{ font-family:'Inter',sans-serif; }
+.block-container{ max-width:840px; padding-top:1.4rem; padding-bottom:4rem; }
+
+/* limpiar chrome de streamlit */
+#MainMenu, footer, [data-testid="stToolbar"]{ visibility:hidden; height:0; }
+[data-testid="stHeader"]{ background:transparent; }
+
+/* ---------- cabecera de marca ---------- */
+.uq-header{ text-align:center; padding:6px 0 0; }
+.uq-logo{
+  width:134px; height:134px; border-radius:50%; object-fit:cover; display:inline-block;
+  border:1px solid rgba(255,255,255,.16);
+  box-shadow:0 0 0 7px rgba(255,255,255,.018), 0 22px 55px rgba(0,0,0,.75);
+}
+.uq-logo-fallback{
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Oswald'; font-weight:700; font-size:54px; color:#fff; background:#101013;
+}
+.uq-brand{
+  font-family:'Oswald',sans-serif; font-weight:700; font-size:30px;
+  letter-spacing:.30em; color:var(--uq-white); text-transform:uppercase;
+  line-height:1; margin-top:16px; padding-left:.30em;
+}
+.uq-tagline{
+  font-family:'Oswald',sans-serif; font-weight:300; font-size:12px;
+  letter-spacing:.44em; color:var(--uq-muted); text-transform:uppercase;
+  margin-top:11px; padding-left:.44em;
+}
+.uq-rule{ height:1px; border:0; margin:22px 0 18px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.20),transparent); }
+
+/* ---------- titulos de seccion ---------- */
+.uq-section{
+  font-family:'Oswald',sans-serif; font-weight:600; text-transform:uppercase;
+  letter-spacing:.20em; font-size:12.5px; color:var(--uq-muted); margin:2px 0 10px;
+}
+
+/* ---------- hero: precio final ---------- */
+.uq-hero{
+  text-align:center; border-radius:18px; padding:26px 20px 22px; margin-top:6px;
+  background:linear-gradient(180deg,#17171B 0%,#0A0A0C 100%);
+  border:1px solid rgba(255,255,255,.13);
+  box-shadow:0 24px 60px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.05);
+}
+.uq-hero-label{ font-family:'Oswald'; letter-spacing:.30em; font-size:11.5px;
+  color:var(--uq-muted); text-transform:uppercase; }
+.uq-hero-value{ font-family:'Oswald'; font-weight:700; font-size:56px; color:#fff;
+  line-height:1.04; margin-top:8px; }
+.uq-hero-value span{ font-size:19px; color:var(--uq-muted); font-weight:500;
+  margin-left:8px; letter-spacing:.14em; }
+.uq-hero-sub{ color:var(--uq-muted); font-size:12.5px; margin-top:12px; letter-spacing:.02em; }
+
+/* ---------- tarjetas secundarias ---------- */
+.uq-grid{ display:flex; gap:14px; margin-top:14px; }
+.uq-card{ flex:1; border-radius:14px; padding:16px 18px;
+  background:var(--uq-panel); border:1px solid var(--uq-line-soft); }
+.uq-card-label{ font-family:'Oswald'; text-transform:uppercase; letter-spacing:.16em;
+  font-size:10.5px; color:var(--uq-muted); }
+.uq-card-value{ font-family:'Oswald'; font-weight:600; font-size:25px; color:#fff; margin-top:5px; }
+.uq-card-sub{ font-size:11px; color:var(--uq-muted); margin-top:3px; letter-spacing:.04em; }
+
+/* ---------- desglose ---------- */
+.uq-steps{ width:100%; border-collapse:collapse; font-size:13.5px; }
+.uq-steps td{ padding:9px 4px; border-bottom:1px solid var(--uq-line-soft); color:var(--uq-text); }
+.uq-steps td:first-child{ color:var(--uq-muted); }
+.uq-steps td:last-child{ text-align:right; font-family:'Oswald'; letter-spacing:.02em; }
+.uq-steps tr:last-child td{ border-bottom:0; color:#fff; }
+
+.uq-empty{ text-align:center; color:var(--uq-muted); padding:40px 0; font-size:14px; }
+.uq-foot{ text-align:center; color:#46464c; font-size:10.5px; letter-spacing:.28em;
+  text-transform:uppercase; font-family:'Oswald'; margin-top:34px; }
+
+/* ---------- widgets ---------- */
+[data-testid="stNumberInput"] input, [data-testid="stTextInput"] input{
+  background:#0B0B0D !important; color:#fff !important;
+  border:1px solid var(--uq-line) !important; border-radius:10px !important;
+}
+[data-testid="stNumberInput"] input:focus, [data-testid="stTextInput"] input:focus{
+  border-color:rgba(255,255,255,.55) !important; box-shadow:0 0 0 2px rgba(255,255,255,.08) !important;
+}
+[data-testid="stWidgetLabel"] p{ color:var(--uq-text) !important; font-size:13px !important; }
+
+/* selectbox */
+[data-baseweb="select"] > div{
+  background:#0B0B0D !important; border:1px solid var(--uq-line) !important; border-radius:10px !important;
+}
+
+/* botones */
+.stButton button{
+  width:100%; background:transparent; color:#fff; border:1px solid rgba(255,255,255,.32);
+  font-family:'Oswald',sans-serif; font-weight:600; letter-spacing:.10em; text-transform:uppercase;
+  border-radius:10px; padding:.45rem 0; transition:.15s ease;
+}
+.stButton button:hover{ border-color:#fff; background:rgba(255,255,255,.06); }
+.stButton button[kind="primary"]{ background:#fff; color:#000; border-color:#fff; }
+.stButton button[kind="primary"]:hover{ background:#E6E6EA; color:#000; }
+
+/* contenedor con borde (entrada) */
+[data-testid="stVerticalBlockBorderWrapper"]{ border-radius:16px !important; }
+
+/* sidebar */
+[data-testid="stSidebar"]{ background:#070708; border-right:1px solid var(--uq-line-soft); }
+[data-testid="stSidebar"] .block-container{ padding-top:1.2rem; }
+.uq-side-brand{ font-family:'Oswald'; font-weight:700; letter-spacing:.34em; color:#fff;
+  text-transform:uppercase; font-size:17px; padding:2px 0 4px 2px; }
+.uq-pill{ display:inline-block; font-family:'Oswald'; font-size:10px; letter-spacing:.14em;
+  text-transform:uppercase; color:#0a0a0a; background:#fff; border-radius:999px;
+  padding:2px 9px; margin-top:8px; }
+.uq-pill.mod{ background:transparent; color:var(--uq-muted); border:1px solid var(--uq-line); }
+
+/* expander */
+[data-testid="stExpander"]{ border:1px solid var(--uq-line-soft) !important; border-radius:12px !important;
+  background:var(--uq-panel) !important; }
+[data-testid="stExpander"] summary{ font-family:'Oswald'; letter-spacing:.06em; }
+</style>
+""",
+    unsafe_allow_html=True,
+)
+
 
 # ---------------------------------------------------------------------------
 # Presets
 # ---------------------------------------------------------------------------
-
-# archivo donde se guardan los presets (junto a app.py)
-PRESETS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "presets.json")
 
 # parametros que define cada preset
 PARAMS = ["descuento", "impuesto", "tasa_cambio", "costo_envio", "margen_ganancia"]
@@ -118,136 +275,171 @@ def eliminar_preset_actual():
 # Barra lateral: presets + configuracion de costos
 # ---------------------------------------------------------------------------
 
-st.sidebar.header("📦 Presets")
+with st.sidebar:
+    if os.path.exists(LOGO_PATH):
+        st.logo(LOGO_PATH)
+    st.markdown('<div class="uq-side-brand">UQ&nbsp;GYM</div>', unsafe_allow_html=True)
 
-st.sidebar.selectbox(
-    "Selecciona una marca / preset",
-    options=list(st.session_state["presets"].keys()),
-    key="selector_preset",
-    on_change=aplicar_preset,
-)
+    st.markdown('<div class="uq-section">Presets</div>', unsafe_allow_html=True)
+    st.selectbox(
+        "Marca / preset",
+        options=list(st.session_state["presets"].keys()),
+        key="selector_preset",
+        on_change=aplicar_preset,
+        label_visibility="collapsed",
+    )
 
-with st.sidebar.expander("💾 Guardar / administrar presets"):
-    st.text_input("Nombre del preset", key="nombre_guardar")
-    col_g, col_e = st.columns(2)
-    col_g.button("💾 Guardar", on_click=guardar_preset_actual, width="stretch")
-    col_e.button("🗑️ Eliminar", on_click=eliminar_preset_actual, width="stretch")
-    st.caption("«Guardar» crea un preset nuevo, o sobrescribe si el nombre ya existe.")
+    # indicador de preset activo / modificado
+    activo = st.session_state["selector_preset"]
+    guardado = st.session_state["presets"].get(activo, {})
+    modificado = any(
+        abs(float(st.session_state[c]) - float(guardado.get(c, st.session_state[c]))) > 1e-9
+        for c in PARAMS
+    )
+    if modificado:
+        st.markdown(f'<span class="uq-pill mod">{activo} · modificado</span>', unsafe_allow_html=True)
+    else:
+        st.markdown(f'<span class="uq-pill">{activo}</span>', unsafe_allow_html=True)
 
-# mostrar el aviso de guardado/eliminado si lo hay
-if "_aviso" in st.session_state:
-    tipo, texto = st.session_state.pop("_aviso")
-    getattr(st.sidebar, tipo)(texto)
+    with st.expander("💾 Guardar / administrar"):
+        st.text_input("Nombre del preset", key="nombre_guardar")
+        col_g, col_e = st.columns(2)
+        col_g.button("Guardar", type="primary", on_click=guardar_preset_actual)
+        col_e.button("Eliminar", on_click=eliminar_preset_actual)
+        st.caption("«Guardar» crea uno nuevo o sobrescribe si el nombre ya existe.")
 
-st.sidebar.markdown("---")
-st.sidebar.header("Configuración de Costos")
+    if "_aviso" in st.session_state:
+        tipo, texto = st.session_state.pop("_aviso")
+        getattr(st, tipo)(texto)
 
-porcentaje_descuento = st.sidebar.number_input(
-    "Descuento Aplicado (%)",
-    step=1.0,
-    min_value=0.0,
-    max_value=100.0,
-    key="descuento",
-)
+    st.markdown('<div class="uq-section" style="margin-top:18px;">Configuración de costos</div>', unsafe_allow_html=True)
 
-impuesto = st.sidebar.number_input(
-    "Multiplicador de Impuesto (ej. 1.07, 1.093)",
-    step=0.001,
-    min_value=1.0,
-    format="%.3f",
-    key="impuesto",
-)
+    porcentaje_descuento = st.number_input(
+        "Descuento Aplicado (%)", step=1.0, min_value=0.0, max_value=100.0, key="descuento",
+    )
+    impuesto = st.number_input(
+        "Multiplicador de Impuesto", step=0.001, min_value=1.0, format="%.3f", key="impuesto",
+    )
+    tasa_cambio = st.number_input(
+        "Tasa de Cambio (USD → MXN)", step=0.5, min_value=1.0, key="tasa_cambio",
+    )
+    costo_envio = st.number_input(
+        "Costo Fijo de Envío (MXN)", step=10.0, min_value=0.0, key="costo_envio",
+    )
+    margen_ganancia = st.number_input(
+        "Margen de Ganancia (×)", step=0.05, min_value=1.0, format="%.2f", key="margen_ganancia",
+    )
 
-tasa_cambio = st.sidebar.number_input(
-    "Tasa de Cambio (USD a MXN)",
-    step=0.5,
-    min_value=1.0,
-    key="tasa_cambio",
-)
-
-costo_envio = st.sidebar.number_input(
-    "Costo Fijo de Envío (MXN)",
-    step=10.0,
-    min_value=0.0,
-    key="costo_envio",
-)
-
-margen_ganancia = st.sidebar.number_input(
-    "Margen de Ganancia (Multiplicador)",
-    step=0.05,
-    min_value=1.0,
-    format="%.2f",
-    key="margen_ganancia",
-)
 
 # ---------------------------------------------------------------------------
-# Area principal
+# Cabecera de marca
 # ---------------------------------------------------------------------------
 
-st.title("Calculadora de Precios Unique")
-
-# indicar el preset activo y si fue modificado respecto al guardado
-preset_guardado = st.session_state["presets"].get(st.session_state["selector_preset"], {})
-modificado = any(
-    abs(float(st.session_state[clave]) - float(preset_guardado.get(clave, st.session_state[clave]))) > 1e-9
-    for clave in PARAMS
+uri = _logo_uri()
+logo_html = (
+    f'<img class="uq-logo" src="{uri}" alt="UQ GYM"/>'
+    if uri else '<div class="uq-logo uq-logo-fallback">UQ</div>'
 )
-st.caption(f"Preset activo: **{st.session_state['selector_preset']}**" + (" — _modificado_ ✏️" if modificado else ""))
-st.markdown("----")
+st.markdown(
+    f"""
+<div class="uq-header">
+  {logo_html}
+  <div class="uq-brand">Unique Gym Shop</div>
+  <div class="uq-tagline">Calculadora de Precios</div>
+</div>
+<hr class="uq-rule"/>
+""",
+    unsafe_allow_html=True,
+)
 
-st.subheader("Entrada de Producto")
-precio_dolares = st.number_input("Precio del producto en Dólares (USD):", min_value=0.0, step=1.0)
 
-# calculos
+# ---------------------------------------------------------------------------
+# Entrada de producto
+# ---------------------------------------------------------------------------
+
+with st.container(border=True):
+    st.markdown('<div class="uq-section">Entrada de producto</div>', unsafe_allow_html=True)
+    precio_dolares = st.number_input("Precio del producto (USD)", min_value=0.0, step=1.0)
+
+
+# ---------------------------------------------------------------------------
+# Calculo y resultados
+# ---------------------------------------------------------------------------
+
 if precio_dolares > 0:
 
-    # 1. Descuento
+    # 1. Descuento  -> 2. Impuesto -> 3. MXN -> 4. Envio -> 5. Margen
     monto_descuento_usd = precio_dolares * (porcentaje_descuento / 100)
     precio_con_descuento = precio_dolares - monto_descuento_usd
-
-    # 2. Impuesto
     precio_con_impuesto = precio_con_descuento * impuesto
-
-    # 3. Conversión a MXN
     precio_pesos = precio_con_impuesto * tasa_cambio
-
-    # 4. Envío
     precio_con_envio = precio_pesos + costo_envio
-
-    # 5. Margen de ganancia
     precio_final = round(precio_con_envio * margen_ganancia, 2)
 
-    # Para mostrar el ahorro (precio sin descuento, mismo flujo)
     precio_sin_descuento = round(precio_dolares * impuesto * tasa_cambio * margen_ganancia + costo_envio * margen_ganancia, 2)
     ahorro_total_mxn = round(precio_sin_descuento - precio_final, 2)
     ganancia_estimada = round(precio_final - precio_con_envio, 2)
 
-    # mostrar paso a paso
-    st.markdown("### 🔢 Desglose del Cálculo")
+    # ---- hero: precio final ----
+    st.markdown(
+        f"""
+<div class="uq-hero">
+  <div class="uq-hero-label">Precio Final Sugerido</div>
+  <div class="uq-hero-value">${precio_final:,.2f}<span>MXN</span></div>
+  <div class="uq-hero-sub">Costo base ${precio_con_envio:,.2f} &nbsp;·&nbsp; Margen ×{margen_ganancia:.2f} &nbsp;·&nbsp; {activo}</div>
+</div>
+""",
+        unsafe_allow_html=True,
+    )
 
-    with st.expander("Ver paso a paso"):
-        st.write(f"1. **Precio original:** ${precio_dolares:.2f} USD")
-        st.write(f"2. **Descuento ({porcentaje_descuento}%):** -${monto_descuento_usd:.2f} USD → ${precio_con_descuento:.2f} USD")
-        st.write(f"3. **Impuesto (×{impuesto}):** ${precio_con_impuesto:.2f} USD")
-        st.write(f"4. **Conversión (×{tasa_cambio} MXN):** ${precio_pesos:.2f} MXN")
-        st.write(f"5. **Envío (+{costo_envio} MXN):** ${precio_con_envio:.2f} MXN")
-        st.write(f"6. **Margen de ganancia (×{margen_ganancia}):** ${precio_final:.2f} MXN")
+    # ---- tarjetas secundarias ----
+    if porcentaje_descuento > 0:
+        ahorro_card = f"""
+    <div class="uq-card">
+      <div class="uq-card-label">Ahorro vs sin descuento</div>
+      <div class="uq-card-value">−${ahorro_total_mxn:,.2f}</div>
+      <div class="uq-card-sub">Descuento {porcentaje_descuento:g}% en USD</div>
+    </div>"""
+    else:
+        ahorro_card = """
+    <div class="uq-card">
+      <div class="uq-card-label">Descuento aplicado</div>
+      <div class="uq-card-value">—</div>
+      <div class="uq-card-sub">Sin descuento</div>
+    </div>"""
 
-    # resultados principales
-    st.markdown("### Resultado del Cálculo")
+    st.markdown(
+        f"""
+<div class="uq-grid">
+    <div class="uq-card">
+      <div class="uq-card-label">Ganancia bruta</div>
+      <div class="uq-card-value">${ganancia_estimada:,.2f}</div>
+      <div class="uq-card-sub">+{int((margen_ganancia - 1) * 100)}% sobre el costo base</div>
+    </div>
+    {ahorro_card}
+</div>
+""",
+        unsafe_allow_html=True,
+    )
 
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric(label="Precio Final Sugerido", value=f"${precio_final} MXN")
-    with col2:
-        st.metric(label="Ganancia Bruta", value=f"${ganancia_estimada} MXN", delta=f"{int((margen_ganancia-1)*100)}%")
-    with col3:
-        if porcentaje_descuento > 0:
-            st.metric(label="Ahorro vs Sin Descuento", value=f"-${ahorro_total_mxn} MXN", delta=f"{porcentaje_descuento}% USD")
-        else:
-            st.metric(label="Descuento Aplicado", value="Sin descuento")
-
-    st.info(f"Costo base MXN antes de ganancia: ${precio_con_envio:.2f} — Ganancia neta estimada: ${ganancia_estimada:.2f} MXN")
+    # ---- desglose paso a paso ----
+    with st.expander("Ver desglose paso a paso"):
+        st.markdown(
+            f"""
+<table class="uq-steps">
+  <tr><td>1 · Precio original</td><td>${precio_dolares:,.2f} USD</td></tr>
+  <tr><td>2 · Descuento ({porcentaje_descuento:g}%)</td><td>−${monto_descuento_usd:,.2f} → ${precio_con_descuento:,.2f} USD</td></tr>
+  <tr><td>3 · Impuesto (×{impuesto:.3f})</td><td>${precio_con_impuesto:,.2f} USD</td></tr>
+  <tr><td>4 · Conversión (×{tasa_cambio:g} MXN)</td><td>${precio_pesos:,.2f} MXN</td></tr>
+  <tr><td>5 · Envío (+${costo_envio:g})</td><td>${precio_con_envio:,.2f} MXN</td></tr>
+  <tr><td>6 · Margen (×{margen_ganancia:.2f})</td><td>${precio_final:,.2f} MXN</td></tr>
+</table>
+""",
+            unsafe_allow_html=True,
+        )
 
 else:
-    st.write("Ingresa un precio arriba para ver el cálculo.")
+    st.markdown('<div class="uq-empty">Ingresa un precio en USD para ver el cálculo.</div>', unsafe_allow_html=True)
+
+
+st.markdown('<div class="uq-foot">Unique Gym Shop — UQ GYM</div>', unsafe_allow_html=True)
