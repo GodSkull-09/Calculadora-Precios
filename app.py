@@ -35,15 +35,30 @@ def guardar_presets(presets):
         st.sidebar.error("No se pudieron guardar los presets en disco.")
 
 
+def _preset_valido(p):
+    """Un preset valido es un dict con los 5 parametros, todos numericos."""
+    return isinstance(p, dict) and all(
+        k in p and isinstance(p[k], (int, float)) and not isinstance(p[k], bool)
+        for k in PARAMS
+    )
+
+
 def cargar_presets():
-    """Lee los presets del archivo; si no existe, lo crea con los de por defecto."""
+    """Lee los presets del archivo, descartando entradas corruptas. Si el
+    archivo no existe o no queda ninguno valido, lo crea con los por defecto."""
     if os.path.exists(PRESETS_FILE):
         try:
             with open(PRESETS_FILE, "r", encoding="utf-8") as f:
                 datos = json.load(f)
-            if isinstance(datos, dict) and datos:
-                return datos
-        except (json.JSONDecodeError, OSError):
+            if isinstance(datos, dict):
+                limpios = {
+                    nombre: {k: float(p[k]) for k in PARAMS}
+                    for nombre, p in datos.items()
+                    if _preset_valido(p)
+                }
+                if limpios:
+                    return limpios
+        except (json.JSONDecodeError, OSError, TypeError, ValueError):
             pass
     guardar_presets(DEFAULT_PRESETS)
     return dict(DEFAULT_PRESETS)

@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+ENV/
+
+# Datos locales de la app
+# Los 6 presets por defecto viven en app.py; este archivo guarda las
+# modificaciones / presets propios y es distinto en cada maquina.
+presets.json
+
+# macOS
+.DS_Store
+
+# Editores
+.vscode/
+.idea/
