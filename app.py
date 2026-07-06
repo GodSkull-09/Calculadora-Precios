@@ -48,9 +48,21 @@ st.markdown(
 [data-testid="stAppViewContainer"], .stMarkdown, .block-container{ font-family:'Inter',sans-serif; }
 .block-container{ max-width:840px; padding-top:1.4rem; padding-bottom:4rem; }
 
-/* limpiar chrome de streamlit */
+/* limpiar chrome de streamlit (sin tocar el control de la barra lateral) */
 #MainMenu, footer, [data-testid="stToolbar"]{ visibility:hidden; height:0; }
-[data-testid="stHeader"]{ background:transparent; }
+[data-testid="stHeader"]{ background:transparent !important; }
+
+/* boton para ABRIR la barra lateral: fijo arriba-izquierda, visible y con contraste */
+[data-testid="stExpandSidebarButton"]{
+  position:fixed !important; top:12px !important; left:14px !important; z-index:1000 !important;
+  display:inline-flex !important; visibility:visible !important; opacity:1 !important;
+  color:#fff !important; background:rgba(255,255,255,.10) !important;
+  border:1px solid rgba(255,255,255,.34) !important; border-radius:9px !important; padding:5px !important;
+}
+[data-testid="stExpandSidebarButton"]:hover{ background:rgba(255,255,255,.20) !important; }
+[data-testid="stExpandSidebarButton"] svg, [data-testid="stExpandSidebarButton"] *{ color:#fff !important; fill:#fff !important; }
+/* boton para cerrar la barra lateral (cuando esta abierta) */
+[data-testid="stSidebarCollapseButton"] svg, [data-testid="stSidebarCollapseButton"] *{ color:#fff !important; fill:#fff !important; }
 
 /* ---------- cabecera de marca ---------- */
 .uq-header{ text-align:center; padding:6px 0 0; }
